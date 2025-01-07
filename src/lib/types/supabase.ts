@@ -41,6 +41,35 @@ export type Database = {
           },
         ]
       }
+      fever_time_rooms: {
+        Row: {
+          chat_per_hour: string
+          created_at: string
+          id: number
+          room_id: string
+        }
+        Insert: {
+          chat_per_hour: string
+          created_at: string
+          id?: number
+          room_id: string
+        }
+        Update: {
+          chat_per_hour?: string
+          created_at?: string
+          id?: number
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_room"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chatrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_img_url: string | null
@@ -132,7 +161,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_fever_rooms: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
