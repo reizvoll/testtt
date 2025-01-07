@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/utils/supabase/client";
 import { notFound } from "next/navigation";
-import { useRouter } from "next/navigation";  // useRouter 추가
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 interface Message {
@@ -19,12 +19,14 @@ interface ChatRoomProps {
 
 export default function ChatRoom({ params }: ChatRoomProps) {
   const supabase = createClient();
-  const router = useRouter();  // useRouter 훅 사용
+  const router = useRouter();
   const roomId = params.id;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [chatRoomTitle, setChatRoomTitle] = useState<string>("");  // 채팅방 제목 상태 추가
 
+  // 채팅방 정보와 메시지 가져오기
   const fetchChatRoom = async () => {
     const { data: room } = await supabase
       .from("chatrooms")
@@ -35,6 +37,8 @@ export default function ChatRoom({ params }: ChatRoomProps) {
     if (!room) {
       return notFound();
     }
+
+    setChatRoomTitle(room.title);  // 채팅방 제목 설정
 
     const { data: messages } = await supabase
       .from("messages")
@@ -55,9 +59,12 @@ export default function ChatRoom({ params }: ChatRoomProps) {
     let imageUrl = null;
 
     if (imageFile) {
+      const fileExtension = imageFile.name.split(".").pop();
+      const newFileName = `messages/${Date.now()}.${fileExtension}`;
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("chat-images")
-        .upload(`messages/${Date.now()}_${imageFile.name}`, imageFile);
+        .upload(newFileName, imageFile);
 
       if (uploadError) {
         console.error("이미지 업로드 실패:", uploadError);
@@ -86,69 +93,80 @@ export default function ChatRoom({ params }: ChatRoomProps) {
       setMessages([...messages, data[0]]);
       setNewMessage("");
       setImageFile(null);
+
+      // 파일 입력 초기화
+      const fileInput = document.getElementById("file-input") as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = "";
+      }
     } else {
       console.error("메시지 전송 실패:", error);
     }
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto py-10 bg-black text-white">
-      {/* 돌아가기 버튼 */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.back()}  // -1로 이동
-          className="text-white bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 transition"
-        >
-          ← 돌아가기
-        </button>
-      </div>
+    <main className="min-h-screen bg-white text-black">
+      <div className="max-w-[1200px] mx-auto py-10">
+        {/* 돌아가기 버튼 */}
+        <div className="mb-6">
+          <button
+            onClick={() => router.back()}
+            className="text-black bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+          >
+            ← 돌아가기
+          </button>
+        </div>
 
-      <h1 className="text-3xl font-bold mb-6">채팅방</h1>
-      <div className="border rounded-md p-6 bg-gray-800 shadow-md">
-        {messages?.map((msg) => (
-          <div key={msg.id} className="mb-4">
-            {msg.chat_img_url && (
-              <div className="relative w-60 h-60 mb-2">
-                <Image
-                  src={msg.chat_img_url}
-                  alt="채팅 이미지"
-                  layout="fill"
-                  objectFit="cover"
-                  className="rounded-lg"
-                />
-              </div>
-            )}
-            <p className="text-lg">{msg.content}</p>
-            <span className="text-sm text-gray-400">
-              {new Date(msg.created_at).toLocaleTimeString()}
-            </span>
-          </div>
-        ))}
-      </div>
+        {/* 채팅방 제목 */}
+        <h1 className="text-3xl font-bold mb-6">{chatRoomTitle || "채팅방"}</h1>
 
-      <div className="mt-6 flex items-center gap-4">
-        <input
-          type="file"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) setImageFile(file);
-          }}
-          className="border rounded-lg p-3 bg-gray-700 text-white h-[52px]"
-        />
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="메시지를 입력하세요"
-          className="border rounded-lg w-full p-3 bg-gray-700 text-white h-[52px]"
-        />
-        <button
-          onClick={handleSendMessage}
-          className="bg-white text-black px-6 py-3 rounded-lg hover:bg-gray-300 hover:text-white transition w-auto whitespace-nowrap"
-        >
-          보내기
-        </button>
+        <div className="border rounded-md p-6 bg-white shadow-md">
+          {messages?.map((msg) => (
+            <div key={msg.id} className="mb-4">
+              {msg.chat_img_url && (
+                <div className="relative w-60 h-60 mb-2">
+                  <Image
+                    src={msg.chat_img_url}
+                    alt="채팅 이미지"
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-lg"
+                  />
+                </div>
+              )}
+              <p className="text-lg">{msg.content}</p>
+              <span className="text-sm text-gray-500">
+                {new Date(msg.created_at).toLocaleTimeString()}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex items-center gap-4">
+          <input
+            id="file-input"
+            type="file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setImageFile(file);
+            }}
+            className="border rounded-lg p-3 bg-white text-black h-[52px]"
+          />
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="메시지를 입력하세요"
+            className="border rounded-lg w-full p-3 bg-white text-black h-[52px]"
+          />
+          <button
+            onClick={handleSendMessage}
+            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition w-auto whitespace-nowrap"
+          >
+            보내기
+          </button>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
