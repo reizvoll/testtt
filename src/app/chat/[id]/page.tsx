@@ -24,9 +24,10 @@ export default function ChatRoom({ params }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [chatRoomTitle, setChatRoomTitle] = useState<string>("");  // 채팅방 제목 상태 추가
+  const [chatRoomTitle, setChatRoomTitle] = useState<string>("");
 
-  // 채팅방 정보와 메시지 가져오기
+  const userId = process.env.NEXT_PUBLIC_AUTH_2;
+
   const fetchChatRoom = async () => {
     const { data: room } = await supabase
       .from("chatrooms")
@@ -38,7 +39,7 @@ export default function ChatRoom({ params }: ChatRoomProps) {
       return notFound();
     }
 
-    setChatRoomTitle(room.title);  // 채팅방 제목 설정
+    setChatRoomTitle(room.title);
 
     const { data: messages } = await supabase
       .from("messages")
@@ -55,6 +56,13 @@ export default function ChatRoom({ params }: ChatRoomProps) {
 
   const handleSendMessage = async () => {
     if (!newMessage && !imageFile) return;
+
+    const userId = process.env.NEXT_PUBLIC_AUTH_2;
+    if (!userId) {
+      console.error("USER_ID is missing in environment variables.");
+      alert("로그인이 필요합니다.");
+      return;
+    }
 
     let imageUrl = null;
 
@@ -83,7 +91,7 @@ export default function ChatRoom({ params }: ChatRoomProps) {
       .insert([{
         content: newMessage,
         room_id: roomId,
-        user_id: "447ba16f-7841-47e0-89c5-7fc3c8e398af",
+        user_id: userId,
         created_at: new Date().toISOString(),
         chat_img_url: imageUrl
       }])
@@ -94,7 +102,6 @@ export default function ChatRoom({ params }: ChatRoomProps) {
       setNewMessage("");
       setImageFile(null);
 
-      // 파일 입력 초기화
       const fileInput = document.getElementById("file-input") as HTMLInputElement;
       if (fileInput) {
         fileInput.value = "";
@@ -107,7 +114,6 @@ export default function ChatRoom({ params }: ChatRoomProps) {
   return (
     <main className="min-h-screen bg-white text-black">
       <div className="max-w-[1200px] mx-auto py-10">
-        {/* 돌아가기 버튼 */}
         <div className="mb-6">
           <button
             onClick={() => router.back()}
@@ -117,7 +123,6 @@ export default function ChatRoom({ params }: ChatRoomProps) {
           </button>
         </div>
 
-        {/* 채팅방 제목 */}
         <h1 className="text-3xl font-bold mb-6">{chatRoomTitle || "채팅방"}</h1>
 
         <div className="border rounded-md p-6 bg-white shadow-md">

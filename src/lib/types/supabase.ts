@@ -135,6 +135,68 @@ export type Database = {
           },
         ]
       }
+      posts: {
+        Row: {
+          body_size: number | null
+          bookmarks: number | null
+          comments: number | null
+          content: string | null
+          created_at: string | null
+          id: string
+          latitude: string | null
+          likes: number | null
+          longitude: string | null
+          season_tag: string | null
+          thumbnail: string | null
+          title: string
+          upload_place: string | null
+          user_id: string
+          view: number | null
+        }
+        Insert: {
+          body_size?: number | null
+          bookmarks?: number | null
+          comments?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: string | null
+          likes?: number | null
+          longitude?: string | null
+          season_tag?: string | null
+          thumbnail?: string | null
+          title: string
+          upload_place?: string | null
+          user_id: string
+          view?: number | null
+        }
+        Update: {
+          body_size?: number | null
+          bookmarks?: number | null
+          comments?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: string | null
+          likes?: number | null
+          longitude?: string | null
+          season_tag?: string | null
+          thumbnail?: string | null
+          title?: string
+          upload_place?: string | null
+          user_id?: string
+          view?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           email: string
