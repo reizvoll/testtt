@@ -19,6 +19,7 @@ const WritePage = () => {
 
   const userId = process.env.NEXT_PUBLIC_AUTH_2;
 
+  // geolocation api를 활용한 사용자의 위치 가져오는 로직 (위도/경도)
   const handleLocationCheck = () => {
     if (navigator.geolocation) {
       setLoading(true);
@@ -38,6 +39,7 @@ const WritePage = () => {
     }
   };
 
+  // 가져온 위도 경도를 맵 api를 활용해서 지역으로 변환시키는 과정
   const getAddress = async (lat: number, lng: number) => {
     const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`;
     const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
@@ -64,6 +66,7 @@ const WritePage = () => {
     }
   };
 
+  // 해당 주소를 supabase posts 테이블에 업로드시키는 로직
   const handleSubmit = async () => {
     if (!title || !content || !address) {
       alert('모든 항목을 입력해주세요.');
