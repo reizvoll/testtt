@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import AddressModal from './_components/AddressModal';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -13,9 +14,9 @@ const WritePage = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
-  // env에서 user_id 가져오기
   const userId = process.env.NEXT_PUBLIC_AUTH_2;
 
   const handleLocationCheck = () => {
@@ -83,7 +84,7 @@ const WritePage = () => {
         latitude: position.lat,
         longitude: position.lng,
         created_at: new Date().toISOString(),
-        user_id: userId,  // env에서 가져온 user_id 삽입
+        user_id: userId,
       },
     ]);
 
@@ -138,12 +139,25 @@ const WritePage = () => {
         </p>
 
         <button
+          onClick={() => setIsModalOpen(true)}
+          className="w-full p-3 mt-4 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+        >
+          주소 검색
+        </button>
+
+        <button
           onClick={handleSubmit}
           className="w-full p-3 mt-6 bg-green-500 hover:bg-green-600 text-white rounded-md"
         >
           게시글 업로드
         </button>
       </div>
+
+      <AddressModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectAddress={(selectedAddress: string) => setAddress(selectedAddress)}
+      />
     </div>
   );
 };
