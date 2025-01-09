@@ -52,7 +52,7 @@ const AddressModal: React.FC<AddressModalProps> = ({ isOpen, onClose, onSelectAd
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="주소 입력 (예: 동대문구, 휘경동)"
+            placeholder="주소 입력 (예: 서초동)"
             className="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-400"
           />
           <button
