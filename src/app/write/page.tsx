@@ -1,25 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import AddressModal from './_components/AddressModal';
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 const WritePage = () => {
   const [address, setAddress] = useState('');
   const [position, setPosition] = useState({ lat: '', lng: '' });
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
-
+  // env에서 user_id 가져오기
   const userId = process.env.NEXT_PUBLIC_AUTH_2;
-
-  // geolocation api를 활용한 사용자의 위치 가져오는 로직 (위도/경도)
   const handleLocationCheck = () => {
     if (navigator.geolocation) {
       setLoading(true);
@@ -38,12 +32,9 @@ const WritePage = () => {
       console.error('Geolocation을 지원하지 않는 브라우저입니다.');
     }
   };
-
-  // 가져온 위도 경도를 맵 api를 활용해서 지역으로 변환시키는 과정
   const getAddress = async (lat: number, lng: number) => {
     const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`;
     const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
-
     try {
       const response = await fetch(url, {
         headers: {
@@ -51,7 +42,6 @@ const WritePage = () => {
         },
       });
       const data = await response.json();
-
       if (data.documents.length > 0) {
         const { region_1depth_name, region_2depth_name, region_3depth_name } =
           data.documents[0].address;
@@ -65,20 +55,16 @@ const WritePage = () => {
       setLoading(false);
     }
   };
-
-  // 해당 주소를 supabase posts 테이블에 업로드시키는 로직
   const handleSubmit = async () => {
     if (!title || !content || !address) {
       alert('모든 항목을 입력해주세요.');
       return;
     }
-
     if (!userId) {
       alert('로그인이 필요합니다.');
       console.error('USER_ID is missing in environment variables.');
       return;
     }
-
     const { error } = await supabase.from('posts').insert([
       {
         title,
@@ -87,10 +73,9 @@ const WritePage = () => {
         latitude: position.lat,
         longitude: position.lng,
         created_at: new Date().toISOString(),
-        user_id: userId,
+        user_id: userId,  // env에서 가져온 user_id 삽입
       },
     ]);
-
     if (error) {
       console.error('Supabase 저장 실패:', error);
       alert('저장 실패');
@@ -99,12 +84,10 @@ const WritePage = () => {
       router.push('/posts');
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-white text-black">
       <div className="w-full max-w-2xl p-8 border border-gray-300 shadow-lg rounded-md">
         <h1 className="text-3xl font-bold mb-6">게시글 작성</h1>
-
         <label className="block mb-4">
           제목
           <input
@@ -115,7 +98,6 @@ const WritePage = () => {
             className="mt-2 p-3 w-full border rounded-md focus:ring-2 focus:ring-blue-400"
           />
         </label>
-
         <label className="block mb-4">
           내용
           <textarea
@@ -126,7 +108,6 @@ const WritePage = () => {
             rows={5}
           />
         </label>
-
         <button
           onClick={handleLocationCheck}
           disabled={loading}
@@ -136,18 +117,9 @@ const WritePage = () => {
         >
           {loading ? '주소 확인 중...' : '현재 위치 주소 확인'}
         </button>
-
         <p className="mt-4 text-center text-lg">
           현재 위치: {address || '주소 정보 없음'}
         </p>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full p-3 mt-4 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-        >
-          주소 검색
-        </button>
-
         <button
           onClick={handleSubmit}
           className="w-full p-3 mt-6 bg-green-500 hover:bg-green-600 text-white rounded-md"
@@ -155,14 +127,7 @@ const WritePage = () => {
           게시글 업로드
         </button>
       </div>
-
-      <AddressModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectAddress={(selectedAddress: string) => setAddress(selectedAddress)}
-      />
     </div>
   );
 };
-
 export default WritePage;
