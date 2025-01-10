@@ -1,19 +1,26 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Supabase 클라이언트 생성
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 const WritePage = () => {
+  const router = useRouter();
+  const userId = process.env.NEXT_PUBLIC_AUTH_2;
+
   const [address, setAddress] = useState('');
   const [position, setPosition] = useState({ lat: '', lng: '' });
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  // env에서 user_id 가져오기
-  const userId = process.env.NEXT_PUBLIC_AUTH_2;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // geolocation api를 활용한 사용자의 위치 가져오는 로직 (위도/경도)
   const handleLocationCheck = () => {
     if (navigator.geolocation) {
       setLoading(true);
@@ -32,9 +39,12 @@ const WritePage = () => {
       console.error('Geolocation을 지원하지 않는 브라우저입니다.');
     }
   };
+
+  // 가져온 위도 경도를 맵 api를 활용해서 지역으로 변환시키는 과정
   const getAddress = async (lat: number, lng: number) => {
     const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`;
     const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
+
     try {
       const response = await fetch(url, {
         headers: {
@@ -42,6 +52,7 @@ const WritePage = () => {
         },
       });
       const data = await response.json();
+
       if (data.documents.length > 0) {
         const { region_1depth_name, region_2depth_name, region_3depth_name } =
           data.documents[0].address;
@@ -55,16 +66,20 @@ const WritePage = () => {
       setLoading(false);
     }
   };
+
+  // 해당 주소를 supabase posts 테이블에 업로드시키는 로직
   const handleSubmit = async () => {
     if (!title || !content || !address) {
       alert('모든 항목을 입력해주세요.');
       return;
     }
+
     if (!userId) {
       alert('로그인이 필요합니다.');
       console.error('USER_ID is missing in environment variables.');
       return;
     }
+
     const { error } = await supabase.from('posts').insert([
       {
         title,
@@ -73,9 +88,10 @@ const WritePage = () => {
         latitude: position.lat,
         longitude: position.lng,
         created_at: new Date().toISOString(),
-        user_id: userId,  // env에서 가져온 user_id 삽입
+        user_id: userId,
       },
     ]);
+
     if (error) {
       console.error('Supabase 저장 실패:', error);
       alert('저장 실패');
@@ -84,7 +100,8 @@ const WritePage = () => {
       router.push('/posts');
     }
   };
-  return (
+
+    return (
     <div className="min-h-screen flex items-center justify-center bg-white text-black">
       <div className="w-full max-w-2xl p-8 border border-gray-300 shadow-lg rounded-md">
         <h1 className="text-3xl font-bold mb-6">게시글 작성</h1>
@@ -130,4 +147,5 @@ const WritePage = () => {
     </div>
   );
 };
+
 export default WritePage;
