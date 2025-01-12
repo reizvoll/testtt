@@ -1,18 +1,42 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import AddressModal from './_components/AddressModal';
+import { createClient } from "@/lib/utils/supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient();
+
+const initialState = {
+  address: '',
+  position: { lat: '', lng: '' },
+  title: '',
+  content: '',
+  bodySize: { height: '', weight: '' },
+  thumbnail: '',
+  tags: [],
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'SET_POSITION':
+      return { ...state, position: action.value };
+    case 'SET_BODY_SIZE':
+      return { ...state, bodySize: { ...state.bodySize, ...action.value } };
+    case 'ADD_TAG':
+      return { ...state, tags: [...state.tags, action.value] };
+    case 'REMOVE_TAG':
+      return { ...state, tags: state.tags.filter((tag) => tag !== action.value) };
+    case 'RESET':
+      return initialState;
+    default:
+      throw new Error('Invalid action type');
+  }
+}
 
 const WritePage = () => {
-  const [address, setAddress] = useState('');
-  const [position, setPosition] = useState({ lat: '', lng: '' });
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [state, dispatch] = useReducer(reducer, initialState);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
@@ -25,7 +49,7 @@ const WritePage = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          setPosition({ lat: latitude.toString(), lng: longitude.toString() });
+          dispatch({ type: 'SET_POSITION', value: { lat: latitude.toString(), lng: longitude.toString() } });
           getAddress(latitude, longitude);
         },
         (err) => {
@@ -38,7 +62,7 @@ const WritePage = () => {
     }
   };
 
-  const getAddress = async (lat: number, lng: number) => {
+  const getAddress = async (lat, lng) => {
     const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`;
     const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
 
@@ -53,9 +77,9 @@ const WritePage = () => {
       if (data.documents.length > 0) {
         const { region_1depth_name, region_2depth_name, region_3depth_name } =
           data.documents[0].address;
-        setAddress(`${region_1depth_name} ${region_2depth_name} ${region_3depth_name}`);
+        dispatch({ type: 'SET_FIELD', field: 'address', value: `${region_1depth_name} ${region_2depth_name} ${region_3depth_name}` });
       } else {
-        setAddress('주소 정보 없음');
+        dispatch({ type: 'SET_FIELD', field: 'address', value: '주소 정보 없음' });
       }
     } catch (error) {
       console.error('주소 조회 실패:', error);
@@ -65,7 +89,7 @@ const WritePage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!title || !content || !address) {
+    if (!state.title || !state.content || !state.address) {
       alert('모든 항목을 입력해주세요.');
       return;
     }
@@ -78,13 +102,14 @@ const WritePage = () => {
 
     const { error } = await supabase.from('posts').insert([
       {
-        title,
-        content,
-        upload_place: address,
-        latitude: position.lat,
-        longitude: position.lng,
+        title: state.title,
+        content: state.content,
+        upload_place: state.address,
         created_at: new Date().toISOString(),
         user_id: userId,
+        body_size: JSON.stringify(state.bodySize),
+        thumbnail: state.thumbnail,
+        tags: JSON.stringify(state.tags),
       },
     ]);
 
@@ -98,65 +123,96 @@ const WritePage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white text-black">
-      <div className="w-full max-w-2xl p-8 border border-gray-300 shadow-lg rounded-md">
-        <h1 className="text-3xl font-bold mb-6">게시글 작성</h1>
-
-        <label className="block mb-4">
-          제목
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="제목을 입력하세요"
-            className="mt-2 p-3 w-full border rounded-md focus:ring-2 focus:ring-blue-400"
-          />
-        </label>
-
-        <label className="block mb-4">
-          내용
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="내용을 입력하세요"
-            className="mt-2 p-3 w-full border rounded-md focus:ring-2 focus:ring-blue-400"
-            rows={5}
-          />
-        </label>
-
-        <button
-          onClick={handleLocationCheck}
-          disabled={loading}
-          className={`w-full p-3 mt-4 text-white rounded-md ${
-            loading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
-          }`}
-        >
-          {loading ? '주소 확인 중...' : '현재 위치 주소 확인'}
-        </button>
-
-        <p className="mt-4 text-center text-lg">
-          현재 위치: {address || '주소 정보 없음'}
-        </p>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full p-3 mt-4 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-        >
-          주소 검색
-        </button>
-
-        <button
-          onClick={handleSubmit}
-          className="w-full p-3 mt-6 bg-green-500 hover:bg-green-600 text-white rounded-md"
-        >
-          게시글 업로드
-        </button>
+    <div className="relative bg-white min-h-screen flex justify-center items-center">
+      <div className="absolute top-0 left-0 w-full h-[96px] bg-gray-300 flex items-center">
+        <div className="ml-16 w-[140px] h-[48px] bg-gray-400"></div>
       </div>
-
+      <div className="w-full max-w-[1200px] p-8 border border-gray-300 shadow-lg rounded-md">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Title</h1>
+            <div className="flex gap-4">
+              <button className="px-6 py-2 bg-white border border-black rounded-lg text-black">
+                임시저장
+              </button>
+              <button onClick={handleSubmit} className="px-6 py-2 bg-black text-white rounded-lg">
+                완료
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-12">
+            <div className="flex flex-col gap-4">
+              <div className="w-[486px] h-[486px] bg-gray-300 rounded-lg flex items-center justify-center">
+                <span className="text-center font-bold text-lg">
+                  드래그 인 드롭이나 추가하기 버튼으로 커버 사진을 업로드해주세요.
+                </span>
+              </div>
+              <button className="w-[180px] h-[48px] bg-black text-white rounded-lg">
+                커버 사진 추가하기
+              </button>
+            </div>
+            <div className="flex flex-col gap-6">
+              <label>
+                <span className="text-lg font-bold">위치 입력</span>
+                <div className="mt-2 px-4 py-3 border border-black rounded-lg">
+                  <p>{state.address || '주소 정보 없음'}</p>
+                </div>
+              </label>
+              <label>
+                <span className="text-lg font-bold">체형</span>
+                <div className="flex gap-6 mt-2">
+                  <div className="flex flex-col">
+                    <span>키</span>
+                    <input
+                      type="text"
+                      value={state.bodySize.height}
+                      onChange={(e) =>
+                        dispatch({ type: 'SET_BODY_SIZE', value: { height: e.target.value } })
+                      }
+                      className="mt-1 px-4 py-2 border border-black rounded-lg"
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span>몸무게</span>
+                    <input
+                      type="text"
+                      value={state.bodySize.weight}
+                      onChange={(e) =>
+                        dispatch({ type: 'SET_BODY_SIZE', value: { weight: e.target.value } })
+                      }
+                      className="mt-1 px-4 py-2 border border-black rounded-lg"
+                      placeholder="kg"
+                    />
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <label className="mt-6">
+            <span className="text-lg font-bold">본문</span>
+            <textarea
+              value={state.content}
+              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'content', value: e.target.value })}
+              className="w-full mt-2 px-4 py-3 border border-black rounded-lg"
+              placeholder="본문 내용을 입력하세요."
+              rows={5}
+            />
+          </label>
+        </div>
+        <div className="mt-8">
+          <span className="text-lg font-bold">룩북 구성 상품</span>
+          <div className="w-[180px] h-[180px] bg-white border border-black rounded-lg flex items-center justify-center mt-4">
+            <span className="text-lg font-medium">+ 추가</span>
+          </div>
+        </div>
+      </div>
       <AddressModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSelectAddress={(selectedAddress: string) => setAddress(selectedAddress)}
+        onSelectAddress={(selectedAddress: string) =>
+          dispatch({ type: 'SET_FIELD', field: 'address', value: selectedAddress })
+        }
       />
     </div>
   );

@@ -1,177 +1,158 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import ChatInput from "./_components/ChatInput";
+import ChatMessages from "./_components/ChatMessages";
+import { exitChatRoom, deleteChatRoom } from "../_utils/chat"; // 이미 구현된 공통 함수 사용
+import { useAuthStore } from "@/lib/store/authStore";
 import { createClient } from "@/lib/utils/supabase/client";
-import { notFound } from "next/navigation";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 
-interface Message {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  chat_img_url?: string | null;
+const supabase = createClient(); // Supabase 클라이언트 생성
+
+interface ChatRoomPageProps {
+  params: { id: string }; // App Router에서 제공하는 동적 경로 파라미터
 }
 
-interface ChatRoomProps {
-  params: { id: string };
-}
+export default function ChatRoomPage({ params }: ChatRoomPageProps) {
+  const { id: roomId } = params; // URL에서 가져온 동적 채팅방 ID
+  const currentUser = useAuthStore((state) => state.user); // 현재 로그인된 사용자 정보
 
-export default function ChatRoom({ params }: ChatRoomProps) {
-  const supabase = createClient();
-  const router = useRouter();
-  const roomId = params.id;
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState<string>("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [chatRoomTitle, setChatRoomTitle] = useState<string>("");
+  const [loading, setLoading] = useState(false); // 로딩 상태
+  const [error, setError] = useState<string | null>(null); // 에러 메시지 상태
+  const [isOwner, setIsOwner] = useState(false); // 방장 여부 상태
 
-  const userId = process.env.NEXT_PUBLIC_AUTH_2;
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!currentUser) return;
 
-  const fetchChatRoom = async () => {
-    const { data: room } = await supabase
-      .from("chatrooms")
-      .select("id, title, image_url, leader_id, created_at")
-      .eq("id", roomId)
-      .single();
+      try {
+        // 방장의 user_id를 확인
+        const { data, error } = await supabase
+          .from("chat_rooms")
+          .select("user_id")
+          .eq("room_id", roomId)
+          .single();
 
-    if (!room) {
-      return notFound();
-    }
+        if (error || !data) {
+          setError("방 정보를 가져올 수 없습니다.");
+          return;
+        }
 
-    setChatRoomTitle(room.title);
+        // 현재 사용자가 방장인지 확인
+        setIsOwner(data.user_id === currentUser.id);
+      } catch (err) {
+        setError("방장 여부 확인 중 오류가 발생했습니다.");
+      }
+    };
 
-    const { data: messages } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("room_id", roomId)
-      .order("created_at", { ascending: true });
+    checkOwnership();
+  }, [currentUser, roomId]);
 
-    setMessages(messages || []);
-  };
-
-  useState(() => {
-    fetchChatRoom();
-  });
-
-  const handleSendMessage = async () => {
-    if (!newMessage && !imageFile) return;
-
-    const userId = process.env.NEXT_PUBLIC_AUTH_2;
-    if (!userId) {
-      console.error("USER_ID is missing in environment variables.");
-      alert("로그인이 필요합니다.");
+  const handleDeleteChatRoom = async () => {
+    if (!currentUser) {
+      setError("로그인 상태를 확인해주세요.");
       return;
     }
 
-    let imageUrl = null;
+    setLoading(true);
+    setError(null);
 
-    if (imageFile) {
-      const fileExtension = imageFile.name.split(".").pop();
-      const newFileName = `messages/${Date.now()}.${fileExtension}`;
+    try {
+      const { success, error } = await deleteChatRoom(currentUser.id, roomId); // 공통 삭제 함수 호출
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("chat-images")
-        .upload(newFileName, imageFile);
-
-      if (uploadError) {
-        console.error("이미지 업로드 실패:", uploadError);
-        return;
+      if (!success) {
+        throw new Error(error); // 삭제 실패 시 에러 발생
       }
 
-      const { data } = supabase.storage
-        .from("chat-images")
-        .getPublicUrl(uploadData.path);
+      alert("채팅방이 삭제되었습니다."); // 성공 메시지
+      window.location.href = "/"; // 홈으로 이동
+    } catch (err) {
+      setError(String(err)); // 에러 메시지 설정
+    } finally {
+      setLoading(false); // 로딩 상태 종료
+    }
+  };
 
-      imageUrl = data.publicUrl;
+  const handleExitChatRoom = async () => {
+    if (!currentUser) {
+      setError("로그인 상태를 확인해주세요.");
+      return;
     }
 
-    const { data, error } = await supabase
-      .from("messages")
-      .insert([{
-        content: newMessage,
-        room_id: roomId,
-        user_id: userId,
-        created_at: new Date().toISOString(),
-        chat_img_url: imageUrl
-      }])
-      .select();
+    setLoading(true);
+    setError(null);
 
-    if (data) {
-      setMessages([...messages, data[0]]);
-      setNewMessage("");
-      setImageFile(null);
+    try {
+      const { success, error } = await exitChatRoom(currentUser.id, roomId); // 공통 퇴장 함수 호출
 
-      const fileInput = document.getElementById("file-input") as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = "";
+      if (!success) {
+        throw new Error(error); // 퇴장 실패 시 에러 발생
       }
-    } else {
-      console.error("메시지 전송 실패:", error);
+
+      alert("채팅방에서 퇴장했습니다."); // 성공 메시지
+      window.location.href = "/"; // 홈으로 이동
+    } catch (err) {
+      setError(String(err)); // 에러 메시지 설정
+    } finally {
+      setLoading(false); // 로딩 상태 종료
     }
   };
 
   return (
-    <main className="min-h-screen bg-white text-black">
-      <div className="max-w-[1200px] mx-auto py-10">
-        <div className="mb-6">
+    <div className="p-5 max-w-4xl mx-auto">
+      {/* 채팅방 페이지 제목 */}
+      <h1 className="text-2xl font-bold mb-4 text-center">채팅방</h1>
+      {currentUser ? (
+        <>
+          {/* 채팅 메시지 컴포넌트 */}
+          <ChatMessages roomId={roomId} />
+          {/* 채팅 입력창 컴포넌트 */}
+          <ChatInput roomId={roomId} memberId={currentUser.id} />
+        </>
+      ) : (
+        // 로그인되지 않은 경우 안내 메시지 표시
+        <p className="text-center text-gray-500">
+          로그인 후에 메시지를 입력할 수 있습니다.
+        </p>
+      )}
+
+      <div className="mt-6 text-center">
+        {/* 퇴장 버튼 */}
+        <button
+          onClick={handleExitChatRoom}
+          disabled={loading}
+          className={`px-6 py-2 text-white font-semibold rounded-md transition-all ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "hover:opacity-90"
+          }`}
+          style={{
+            backgroundColor: "#ff4d4d", // 퇴장 버튼 HEX 색상 유지
+          }}
+        >
+          {loading ? "Leaving..." : "Leave Chat Room"}
+        </button>
+        {isOwner && (
           <button
-            onClick={() => router.back()}
-            className="text-black bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-          >
-            ← 돌아가기
-          </button>
-        </div>
-
-        <h1 className="text-3xl font-bold mb-6">{chatRoomTitle || "채팅방"}</h1>
-
-        <div className="border rounded-md p-6 bg-white shadow-md">
-          {messages?.map((msg) => (
-            <div key={msg.id} className="mb-4">
-              {msg.chat_img_url && (
-                <div className="relative w-60 h-60 mb-2">
-                  <Image
-                    src={msg.chat_img_url}
-                    alt="채팅 이미지"
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-lg"
-                  />
-                </div>
-              )}
-              <p className="text-lg">{msg.content}</p>
-              <span className="text-sm text-gray-500">
-                {new Date(msg.created_at).toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center gap-4">
-          <input
-            id="file-input"
-            type="file"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) setImageFile(file);
+            onClick={handleDeleteChatRoom}
+            disabled={loading}
+            className={`ml-4 px-6 py-2 text-white font-semibold rounded-md transition-all ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "hover:opacity-90"
+            }`}
+            style={{
+              backgroundColor: "#ff0000", // 삭제 버튼 HEX 색상 유지
             }}
-            className="border rounded-lg p-3 bg-white text-black h-[52px]"
-          />
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="메시지를 입력하세요"
-            className="border rounded-lg w-full p-3 bg-white text-black h-[52px]"
-          />
-          <button
-            onClick={handleSendMessage}
-            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition w-auto whitespace-nowrap"
           >
-            보내기
+            {loading ? "Deleting..." : "Delete Chat Room"}
           </button>
-        </div>
+        )}
+        {/* 에러 메시지 표시 */}
+        {error && (
+          <p className="text-red-500 mt-4 font-medium">{error}</p>
+        )}
       </div>
-    </main>
+    </div>
   );
 }

@@ -9,6 +9,193 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_fevertime_rooms: {
+        Row: {
+          chat_per_hour: string | null
+          created_at: string | null
+          id: string
+          room_id: string | null
+        }
+        Insert: {
+          chat_per_hour?: string | null
+          created_at?: string | null
+          id: string
+          room_id?: string | null
+        }
+        Update: {
+          chat_per_hour?: string | null
+          created_at?: string | null
+          id?: string
+          room_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_fevertime_rooms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      chat_members: {
+        Row: {
+          isactive: boolean
+          isadmin: boolean
+          member_id: string
+          room_id: string
+        }
+        Insert: {
+          isactive?: boolean
+          isadmin?: boolean
+          member_id: string
+          room_id: string
+        }
+        Update: {
+          isactive?: boolean
+          isadmin?: boolean
+          member_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: true
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          image_url: string | null
+          member_id: string
+          message_id: string
+          room_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at: string
+          image_url?: string | null
+          member_id: string
+          message_id?: string
+          room_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          image_url?: string | null
+          member_id?: string
+          message_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "chat_members"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          created_at: string | null
+          isactive: boolean | null
+          room_description: string | null
+          room_hashtags: string[] | null
+          room_id: string
+          room_subtitle: string | null
+          room_thumbnail_url: string | null
+          room_title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          isactive?: boolean | null
+          room_description?: string | null
+          room_hashtags?: string[] | null
+          room_id?: string
+          room_subtitle?: string | null
+          room_thumbnail_url?: string | null
+          room_title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          isactive?: boolean | null
+          room_description?: string | null
+          room_hashtags?: string[] | null
+          room_id?: string
+          room_subtitle?: string | null
+          room_thumbnail_url?: string | null
+          room_title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_rooms_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatrooms: {
         Row: {
           created_at: string
@@ -41,6 +228,48 @@ export type Database = {
           },
         ]
       }
+      comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          post_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id: string
+          post_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          post_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fever_time_rooms: {
         Row: {
           chat_per_hour: string
@@ -66,6 +295,42 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "chatrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -137,55 +402,49 @@ export type Database = {
       }
       posts: {
         Row: {
-          body_size: number | null
-          bookmarks: number | null
-          comments: number | null
-          content: string | null
-          created_at: string | null
+          body_size: number
+          bookmarks: number
+          comments: number
+          content: string
+          created_at: string
           id: string
-          latitude: string | null
-          likes: number | null
-          longitude: string | null
-          season_tag: string | null
-          thumbnail: string | null
+          likes: number
+          tags: string
+          thumbnail: string
           title: string
-          upload_place: string | null
+          upload_place: string
           user_id: string
-          view: number | null
+          view: number
         }
         Insert: {
-          body_size?: number | null
-          bookmarks?: number | null
-          comments?: number | null
-          content?: string | null
-          created_at?: string | null
+          body_size: number
+          bookmarks?: number
+          comments?: number
+          content: string
+          created_at: string
           id?: string
-          latitude?: string | null
-          likes?: number | null
-          longitude?: string | null
-          season_tag?: string | null
-          thumbnail?: string | null
+          likes?: number
+          tags: string
+          thumbnail: string
           title: string
-          upload_place?: string | null
+          upload_place: string
           user_id: string
-          view?: number | null
+          view?: number
         }
         Update: {
-          body_size?: number | null
-          bookmarks?: number | null
-          comments?: number | null
-          content?: string | null
-          created_at?: string | null
+          body_size?: number
+          bookmarks?: number
+          comments?: number
+          content?: string
+          created_at?: string
           id?: string
-          latitude?: string | null
-          likes?: number | null
-          longitude?: string | null
-          season_tag?: string | null
-          thumbnail?: string | null
+          likes?: number
+          tags?: string
+          thumbnail?: string
           title?: string
-          upload_place?: string | null
+          upload_place?: string
           user_id?: string
-          view?: number | null
+          view?: number
         }
         Relationships: [
           {
@@ -193,6 +452,38 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase: {
+        Row: {
+          description: string | null
+          id: string
+          post_id: string
+          price: number | null
+          title: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          post_id?: string
+          price?: number | null
+          title: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          post_id?: string
+          price?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]

@@ -1,11 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-// Supabase 클라이언트 생성
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/lib/store/authStore'; // 인증 상태를 가져오는 스토어
+import { useRouter } from 'next/navigation';
+import { createClient } from "@/lib/utils/supabase/client";
+
+const supabase = createClient();
 
 // Post 타입 정의
 interface Post {
@@ -18,16 +18,24 @@ interface Post {
 
 // 게시글 목록 및 삭제 페이지
 const PostsPage = () => {
-  // posts 상태에 Post[] 타입 명시
+  const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user); // 로그인 상태 확인
   const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true); // 로딩 상태 추가
 
-  // 페이지 로딩 시 게시글 불러오기
+  // 로그인 상태 확인
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    if (!currentUser) {
+      alert('로그인이 필요합니다.');
+      router.push('/login'); // 로그인 페이지로 리다이렉트
+    } else {
+      fetchPosts(); // 게시글 불러오기
+    }
+  }, [currentUser, router]);
 
   // Supabase에서 게시글 불러오기
   const fetchPosts = async () => {
+    setLoading(true); // 로딩 시작
     const { data, error } = await supabase
       .from('posts')
       .select('*')
@@ -36,9 +44,9 @@ const PostsPage = () => {
     if (error) {
       console.error('게시글 불러오기 실패:', error);
     } else {
-      // 데이터가 있을 경우 상태 업데이트
       setPosts(data || []);
     }
+    setLoading(false); // 로딩 종료
   };
 
   // 게시글 삭제 핸들러
@@ -56,6 +64,11 @@ const PostsPage = () => {
     }
   };
 
+  if (!currentUser || loading) {
+    // 로딩 중 또는 로그인하지 않은 상태
+    return <p className="p-8 text-center">로딩 중...</p>;
+  }
+
   return (
     <div className="p-8 bg-white min-h-screen text-black">
       <h1 className="text-4xl font-bold mb-6">게시글 목록</h1>
@@ -68,9 +81,7 @@ const PostsPage = () => {
           >
             <h2 className="text-2xl font-bold">{post.title}</h2>
             <p className="text-lg">{post.content}</p>
-            <p className="text-sm text-gray-500">
-              위치: {post.upload_place}
-            </p>
+            <p className="text-sm text-gray-500">위치: {post.upload_place}</p>
             <p className="text-sm text-gray-400">
               작성일: {new Date(post.created_at).toLocaleDateString()}
             </p>
