@@ -3,11 +3,9 @@
 import { useAuthStore } from "@/lib/store/authStore";
 import { useState } from "react";
 import { useFunnel } from "../_hooks/useFunnel";
-import { createChatRoom } from "../_utils/chat"; // Supabase 함수 import
 import HashTags from "./_components/HashTags";
 import Summary from "./_components/Summary";
 import ThumbnailImage from "./_components/ThumbnailImage";
-import { uploadThumbnail } from "../_utils/uploadThumbnail";
 import { createRoomHandler } from "../_utils/createrRoomHandler";
 
 const steps = ["Summary", "Thumbnail", "HashTags"];
