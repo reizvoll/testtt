@@ -402,14 +402,14 @@ export type Database = {
       }
       posts: {
         Row: {
-          body_size: number
+          body_size: number[]
           bookmarks: number
           comments: number
           content: string
           created_at: string
           id: string
           likes: number
-          tags: string
+          tags: string[]
           thumbnail: string
           title: string
           upload_place: string
@@ -417,14 +417,14 @@ export type Database = {
           view: number
         }
         Insert: {
-          body_size: number
+          body_size: number[]
           bookmarks?: number
           comments?: number
           content: string
           created_at: string
           id?: string
           likes?: number
-          tags: string
+          tags: string[]
           thumbnail: string
           title: string
           upload_place: string
@@ -432,14 +432,14 @@ export type Database = {
           view?: number
         }
         Update: {
-          body_size?: number
+          body_size?: number[]
           bookmarks?: number
           comments?: number
           content?: string
           created_at?: string
           id?: string
           likes?: number
-          tags?: string
+          tags?: string[]
           thumbnail?: string
           title?: string
           upload_place?: string

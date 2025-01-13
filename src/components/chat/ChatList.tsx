@@ -1,6 +1,4 @@
 import Image from "next/image";
-import { createClient } from "@/lib/utils/supabase/client";  // Supabase 클라이언트 추가
-import { useRouter } from "next/navigation";  // 페이지 새로고침 없이 반영
 
 interface ChatRoom {
   id: string;
