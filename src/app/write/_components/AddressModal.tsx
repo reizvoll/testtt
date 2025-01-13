@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAddressFromCoordinates, getCurrentPosition } from '../_utils/location';
 
 type AddressModalProps = {
   isOpen: boolean;
@@ -13,12 +14,13 @@ const AddressModal = ({ isOpen, onClose, onSelectAddress }: AddressModalProps) =
   const [geoLoading, setGeoLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
+
+  // 검색 처리 함수
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
 
     const url = `https://dapi.kakao.com/v2/local/search/address.json?query=${searchTerm}`;
-    const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
-
     try {
       setLoading(true);
       const response = await fetch(url, {
@@ -26,7 +28,6 @@ const AddressModal = ({ isOpen, onClose, onSelectAddress }: AddressModalProps) =
           Authorization: `KakaoAK ${apiKey}`,
         },
       });
-
       const data = await response.json();
 
       if (data.documents.length > 0) {
@@ -43,51 +44,16 @@ const AddressModal = ({ isOpen, onClose, onSelectAddress }: AddressModalProps) =
     }
   };
 
+  // 현재 위치 가져오기 처리
   const handleGetCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      setErrorMessage('Geolocation을 지원하지 않는 브라우저입니다.');
-      return;
-    }
-
     try {
       setGeoLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-
-          const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${longitude}&y=${latitude}`;
-          const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
-
-          try {
-            const response = await fetch(url, {
-              headers: {
-                Authorization: `KakaoAK ${apiKey}`,
-              },
-            });
-
-            const data = await response.json();
-
-            if (data.documents.length > 0) {
-              const { region_1depth_name, region_2depth_name, region_3depth_name } =
-                data.documents[0].address;
-              const currentAddress = `${region_1depth_name} ${region_2depth_name} ${region_3depth_name}`;
-              onSelectAddress(currentAddress);
-              onClose();
-            } else {
-              setErrorMessage('현재 위치의 주소를 가져올 수 없습니다.');
-            }
-          } catch (error) {
-            console.error('주소 변환 실패:', error);
-            setErrorMessage('주소 조회 중 오류가 발생했습니다.');
-          }
-        },
-        (error) => {
-          console.error('Geolocation 오류:', error);
-          setErrorMessage('현재 위치를 가져올 수 없습니다.');
-        }
-      );
+      const { lat, lng } = await getCurrentPosition();
+      const address = await getAddressFromCoordinates(lat, lng, apiKey!);
+      onSelectAddress(address);
+      onClose();
     } catch (error) {
-      console.error('Geolocation 요청 실패:', error);
+      console.error('위치 확인 실패:', error);
       setErrorMessage('현재 위치를 가져오는 중 오류가 발생했습니다.');
     } finally {
       setGeoLoading(false);
@@ -135,8 +101,8 @@ const AddressModal = ({ isOpen, onClose, onSelectAddress }: AddressModalProps) =
           ))}
         </ul>
 
-                {/* 실시간 주소 가져오기 */}
-                <button
+        {/* 현재 위치 가져오기 */}
+        <button
           onClick={handleGetCurrentLocation}
           className="w-full p-3 bg-green-500 hover:bg-green-600 text-white rounded-md mt-4"
           disabled={geoLoading}
