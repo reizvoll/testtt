@@ -9,15 +9,21 @@ type ThumbnailUploadProps = {
   onThumbnailUpload: (thumbnailUrl: string) => void; // 업로드된 URL을 전달받는 콜백
 };
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
   thumbnail,
   onThumbnailUpload,
 }) => {
-  // 썸네일 업로드 로직
   const uploadThumbnail = async (file: File): Promise<string> => {
     try {
+      // 파일 크기 확인
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error("파일 크기는 5MB 이하만 업로드할 수 있습니다.");
+      }
+
       const timestamp = Date.now(); // 고유 파일명 생성용 타임스탬프
-      const extension = file.name.split(".").pop() || "png"; // 파일 확장자 추출
+      const extension = file.name.split(".").pop() || "unknown"; // 파일 확장자 추출
       const uniqueFileName = `${timestamp}.${extension}`; // 고유 파일명 생성
 
       // 파일 경로 설정: post-images/thumbnail/고유 파일명
@@ -51,7 +57,6 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
     }
   };
 
-  // 파일 선택 버튼 클릭 핸들러
   const handleButtonClick = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -62,15 +67,14 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
         try {
           const thumbnailUrl = await uploadThumbnail(file);
           onThumbnailUpload(thumbnailUrl); // 업로드 성공 시 부모 컴포넌트로 URL 전달
-        } catch {
-          alert("썸네일 업로드 중 오류가 발생했습니다.");
+        } catch (error: any) {
+          alert(error.message); // 오류 메시지 알림
         }
       }
     };
     fileInput.click();
   };
 
-  // 드래그 앤 드롭 핸들러
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -78,8 +82,8 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
       try {
         const thumbnailUrl = await uploadThumbnail(file);
         onThumbnailUpload(thumbnailUrl); // 업로드 성공 시 부모 컴포넌트로 URL 전달
-      } catch {
-        alert("썸네일 업로드 중 오류가 발생했습니다.");
+      } catch (error: any) {
+        alert(error.message); // 오류 메시지 알림
       }
     }
   };
@@ -103,12 +107,15 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
       ) : (
         <>
           <p className="text-lg font-semibold mb-2">
-            드래그 인 드롭이나 추가하기 버튼으로 커버 사진을 업로드해주세요.
+            드래그 인 드롭이나 추가하기 버튼으로 <br /> 커버 사진을 업로드해주세요.
           </p>
-          <p className="text-sm text-gray-500 mb-4">
-            *권장 사이즈<br />
+          <p className="text-sm text-gray-700 mb-4">
+            <strong>*권장 사이즈</strong><br />
             모바일 : 1920 x 1920, 최소 1400 x 1400 (1:1 비율)<br />
             PC : 1920 x 1080, 최소 1400 x 787 (16:9 비율)
+          </p>
+          <p className="text-sm text-red-500 mb-4">
+            *최대 파일 크기: 5MB 이하의 이미지 파일만 업로드 가능합니다.
           </p>
           <button
             className="px-6 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800"
